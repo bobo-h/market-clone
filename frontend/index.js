@@ -13,7 +13,7 @@ const calcTime = (timestamp) => {
   if (hour > 0) return `${hour}시간 전`;
   else if (minute > 0) return `${minute}분 전`;
   else if (second > 0) return `${second}초 전`;
-  else "방금 전";
+  else return "방금 전";
 };
 
 //가져온 데이터를 기준으로 화면 구현 업데이트 하기
