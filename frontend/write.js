@@ -4,7 +4,7 @@ const handleSubmitForm = async (event) => {
   event.preventDefault();
   //submit 버튼이 자동새로고침되지 않게 하기 위함.
   const body = new FormData(form);
-  body.append("insertAt", new Date().getTime());
+  body.append("insertAT", new Date().getTime());
   //현재 시간을 같이 폼 데이터에 보내주기 위함.
   //body.append = body에 어떤 정보를 추가한다는 문법
   try {

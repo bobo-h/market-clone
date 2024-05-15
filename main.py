@@ -19,15 +19,15 @@ async def create_item(image:UploadFile,
                 price:Annotated[int,Form()], 
                 description:Annotated[str,Form()], 
                 place:Annotated[str,Form()],
-                insertAt:Annotated[int,Form()]
+                insertAT:Annotated[int,Form()]
                 ):
     
     image_bytes = await image.read()
     # 받은 데이터를 넣어줄 건데 image는 블롭타입으로 굉장히 크게오기에 image데이터를 read할 시간이 필요하다.
     cur.execute(f"""
-                INSERT INTO items(title,image,price,description,place,insertAt)
+                INSERT INTO items(title,image,price,description,place,insertAT)
                 VALUES 
-                ('{title}','{image_bytes.hex()}',{price},'{description}','{place}',{insertAt})
+                ('{title}','{image_bytes.hex()}',{price},'{description}','{place}',{insertAT})
                 """)
     # 읽힌 정보를 db에 인설트 해줄 것이고 자바스크립트의 백틱같은 역할을 하는 f문자열이라 알려주는 것("""내용""")을 작성한다.
     # price는 숫자 str이기에 따옴표를 작성하지 않아도 된다.

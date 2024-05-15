@@ -45,7 +45,7 @@ const renderData = (data) => {
 
     const InfoMetaDiv = document.createElement("div");
     InfoMetaDiv.className = "item-list__info-meta";
-    InfoMetaDiv.innerText = obj.place + " " + calcTime(obj.insertAt);
+    InfoMetaDiv.innerText = obj.place + " " + calcTime(obj.insertAT);
     //타임스탬프가 calcTime함수에 전달된다.
 
     const InfoPriceDiv = document.createElement("div");
