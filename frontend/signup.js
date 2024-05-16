@@ -32,7 +32,7 @@ const handleSubmit = async (event) => {
     if (data === "200") {
       alert("회원가입이 완료되었습니다.");
       window.location.pathname = "/login.html";
-    } //서버에서 처리완료가 된 return "200"을 받았을 때 회원가입 완료 알림 뜨게 하는 것
+    } //서버에서 처리완료가 된 return "200"을 받았을 때 회원가입 완료 알림과 함께 로그인 페이지로 이동
   } else {
     div.innerText = "비밀번호가 일치하지 않습니다.";
     div.style.color = "red";

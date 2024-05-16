@@ -64,13 +64,25 @@ const renderData = (data) => {
 
 //서버로부터 데이터 받아오기
 const fetchList = async () => {
-  const res = await fetch("/items");
+  const accessToken = window.localStorage.getItem("token");
+  const res = await fetch("/items", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (res.status === 401) {
+    alert("로그인이 필요합니다.");
+    window.location.pathname = "/login.html";
+    return;
+  }
   const data = await res.json();
   renderData(data);
 };
 //write.js에선 items를 method: "POST"로 어떤 값을 생성하게 했는데(서버에서도 post로 받음)
 //이번에는 어떤 값을 조회하는(CRUD중에 R,read를 담당하는) get요청을 보내(아무것도 없는 기본값이 get임)
 //서버에서 @app.get('/items')로 받아 items의 list를 보내주는 형식으로 만들어야함
+//서버에 보낼 때 인증된 토큰을 headers에서 가져와서(getItem) 같이 보내줘야한다.
 
 //만든 함수 호출
 fetchList();

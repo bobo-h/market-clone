@@ -1,7 +1,9 @@
-from fastapi import FastAPI,UploadFile,Form,Response
+from fastapi import FastAPI,UploadFile,Form,Response,Depends
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.staticfiles import StaticFiles
+from fastapi_login import LoginManager
+from fastapi_login.exceptions import InvalidCredentialsException
 from typing import Annotated
 import sqlite3
 
@@ -10,19 +12,65 @@ con=sqlite3.connect('db.db' ,check_same_thread=False)
 cur=con.cursor()
 # db에 커서라는 개념이 있는데 그것을 이용해서 특정 인서트하거나 셀렉트 할 때 사용하기위해 작성함
 
-cur.execute(f"""
-            CREATE TABLE IF NOT EXISTS items (
-                id INTEGER PRIMARY KEY,  
-                title TEXT NOT NULL,
-                image BLOB,
-                price INTEGER NOT NULL,
-                description TEXT,
-                place TEXT NOT NULL,
-                insertAt INTEGER NOT NULL
-            );
-            """)
-
 app=FastAPI()
+
+SECRET = "coding-study"
+manager = LoginManager(SECRET,'/login')
+
+@manager.user_loader()
+def query_user(data):
+    WHERE_STATEMENTS = f'id="{data}"'
+    if type(data) == dict:
+        WHERE_STATEMENTS = f'id="{data['id']}"'
+    # 객체 형태로 넘어오게 되면 그 안에 있는 id를 빼서 써야하기에 WHERE_STATEMENTS를 사용해야한다.
+    con.row_factory = sqlite3.Row
+    #컬럼명을 같이 가져오는 문법
+    cur = con.cursor()
+    #db를 가져오면서 connection의 현재 위치를 cursor라고 하는 위치를 업데이트 해줘야 데이터가 제대로 들어온다.
+    user = cur.execute(f"""
+                       SELECT * from users WHERE {WHERE_STATEMENTS}
+                       """).fetchone()
+    return user
+# users테이블 안의 모든(*) 값을 조회하는데 
+# 첫번째 WHERE_STATEMENTS 뜻 = 그냥 id, str값으로 넘어오게되면 바로 맨아래 {WHERE_STATEMENTS}값에 들어가고
+# 두번째 WHERE_STATEMENTS 뜻 = 아까 수정한 id, name, email을 sub에 넣어준 값(dict)으로 오게 되면 그 안의 id를 찾고나서 위와 같은 곳에 들어간다.
+
+@app.post('/login')
+def login(id:Annotated[str,Form()],
+            password:Annotated[str,Form()]):
+    user = query_user(id)
+    # 해당유저가 존재하는지 조회해보는 것
+    if not user: 
+        raise InvalidCredentialsException
+        # 파이썬에서 에러메세지를 던지는 문법 = raise = 클라이언트 에러 상태코드 401을 자동으로 내려준다.
+    elif password != user['password']:
+        raise InvalidCredentialsException
+    
+    access_token = manager.create_access_token(data={
+        'sub': {
+            'id': user['id'],
+            'name': user['name'],
+            'email': user['email']
+        }
+    })
+    
+    return {'access_token':access_token}
+    # 클라이언트에게 엑세스토큰을 부여하기 위해 값 변경
+    # return "HI" 였다면
+    # 리턴값이 보인다는 것은 정상작동이라는 것. 그렇기에 return을 HI로 해도 status는 상태코드 200을 내려준다.
+    # f12의 network의 login의 response페이지에서 return값인 "HI"확인가능, headers에서는 상태코드 200 OK 확인가능
+
+@app.post('/signup')
+def signup(id:Annotated[str,Form()],
+           password:Annotated[str,Form()],
+           name:Annotated[str,Form()],
+           email:Annotated[str,Form()]):
+    cur.execute(f"""
+                INSERT INTO users(id,name,email,password)
+                VALUES ('{id}','{name}','{email}','{password}')
+                """)
+    con.commit()
+    return '200'
 
 @app.post('/items')
 async def create_item(image:UploadFile, 
@@ -31,7 +79,7 @@ async def create_item(image:UploadFile,
                 price:Annotated[int,Form()], 
                 description:Annotated[str,Form()], 
                 place:Annotated[str,Form()],
-                insertAT:Annotated[int,Form()]
+                insertAT:Annotated[int,Form()],
                 ):
     
     image_bytes = await image.read()
@@ -50,7 +98,8 @@ async def create_item(image:UploadFile,
 # 서버쪽에서 완료가 되면 200이라는 상태코드를 내려주는 로직
 
 @app.get('/items')
-async def get_items():
+async def get_items(user=Depends(manager)):
+    # user=Depends(manager) = 유저가 인증된 상태에서만 응답을 보낼 수 있게 하는 것(헤더에 엑세스토큰을 넣어서 보내야지 서버가 알 수 있을 것)
     con.row_factory = sqlite3.Row
     #컬럼명을 같이 가져오는 문법
     cur = con.cursor()
@@ -83,18 +132,6 @@ async def get_image(item_id):
     
     # hex이미지를 가져와 컨텐츠로 응답하겠다.
     return Response(content=bytes.fromhex(image_bytes))
-
-@app.post('/signup')
-def signup(id:Annotated[str,Form()],
-           password:Annotated[str,Form()],
-           name:Annotated[str,Form()],
-           email:Annotated[str,Form()]):
-    cur.execute(f"""
-                INSERT INTO users(id,name,email,password)
-                VALUES ('{id}','{name}','{email}','{password}')
-                """)
-    con.commit()
-    return '200'
     
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 # 루트 패쓰는 맨 밑에 작성하기
